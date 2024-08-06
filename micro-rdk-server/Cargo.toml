@@ -62,3 +62,8 @@ esp_idf_sdkconfig_defaults = [
 remote_component = { name = "espressif/esp32-camera", version = "2.0.9"}
 bindings_module = "camera"
 bindings_header = "bindings.h"
+
+[[package.metadata.esp-idf-sys.extra_components]]
+remote_component = { name = "allisonschiang/person_detection", version = "2.0.5"}
+bindings_module = "person_detection"
+bindings_header = "pd_bindings.h"
