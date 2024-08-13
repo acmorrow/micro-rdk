@@ -166,6 +166,7 @@ impl Default for ComponentRegistry {
             crate::common::generic::register_models(&mut r);
             crate::common::ina::register_models(&mut r);
             crate::common::wheeled_base::register_models(&mut r);
+
             #[cfg(feature = "camera")]
             crate::common::camera::register_models(&mut r);
         }
@@ -177,6 +178,7 @@ impl Default for ComponentRegistry {
                 crate::esp32::encoder::register_models(&mut r);
                 crate::esp32::hcsr04::register_models(&mut r);
                 crate::esp32::single_encoder::register_models(&mut r);
+                crate::esp32::person_detection::register_models(&mut r);
             }
         }
         r
