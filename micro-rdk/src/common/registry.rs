@@ -166,7 +166,6 @@ impl Default for ComponentRegistry {
             crate::common::generic::register_models(&mut r);
             crate::common::ina::register_models(&mut r);
             crate::common::wheeled_base::register_models(&mut r);
-
             #[cfg(feature = "camera")]
             crate::common::camera::register_models(&mut r);
         }
