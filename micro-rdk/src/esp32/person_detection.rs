@@ -15,8 +15,11 @@ use crate::common::sensor::TypedReadingsResult;
 use crate::common::status::Status;
 use crate::common::status::StatusError;
 use crate::google::protobuf;
+use core::panic;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use crate::esp32::esp_idf_svc::hal::sys::person_detection::setup_model;
+
 
 #[derive(DoCommand)]
 pub struct PersonDetection;
@@ -32,7 +35,9 @@ impl PersonDetection {
     pub fn from_config(cfg: ConfigType, deps: Vec<Dependency>) -> Result<SensorType, SensorError> {
         //iterate through to find resource type in deps that would be a camera
         //pass reference to lock to camera as something sensor holds so everytime you get reading you lock cam
-
+        unsafe{
+            setup_model();
+        }
         log::debug!("person detection sensor instantiated from config");
         Ok(Arc::new(Mutex::new(Self {})))
     }
@@ -64,7 +69,7 @@ impl SensorT<f64> for PersonDetection {
             let y: f32 = *ptr;
             let ptr_final = y as f64;
             let mut x = HashMap::new();
-            x.insert("bytes".to_string(), ptr_final);
+            x.insert("Person Confidence:".to_string(), ptr_final);
             log::debug!("person_detection - get readings OK");
             Ok(x)
         }
