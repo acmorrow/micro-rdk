@@ -20,7 +20,7 @@ buf: buf-clean
 	buf generate buf.build/viamrobotics/goutils --template micro-rdk/buf.gen.yaml
 	buf generate buf.build/googleapis/googleapis --template micro-rdk/buf.gen.yaml --path google/rpc --path google/api
 	buf generate buf.build/viamrobotics/api --template micro-rdk/buf.gen.yaml
-	buf generate buf.build/protocolbuffers/wellknowntypes --template micro-rdk/buf.gen.yaml 
+	buf generate buf.build/protocolbuffers/wellknowntypes --template micro-rdk/buf.gen.yaml
 
 license-finder:
 	license_finder
@@ -99,6 +99,9 @@ size:
 
 build-esp32-bin:
 	cargo +esp espflash save-image --package micro-rdk-server --merge --chip esp32 target/xtensa-esp32-espidf/micro-rdk-server-esp32.bin -T micro-rdk-server/esp32/partitions.csv -s 4mb  --bin micro-rdk-server-esp32 --target=xtensa-esp32-espidf  -Zbuild-std=std,panic_abort --release
+
+build-esp32s3-bin:
+	cargo +esp espflash save-image --package micro-rdk-server --merge --chip esp32s3 target/xtensa-esp32s3-espidf/micro-rdk-server-esp32.bin -T micro-rdk-server/esp32/partitions.csv -s 8mb  --bin micro-rdk-server-esp32 --target=xtensa-esp32s3-espidf  -Zbuild-std=std,panic_abort --release
 
 flash-esp32-bin:
 ifneq (,$(wildcard ./target/xtensa-esp32-espidf/micro-rdk-server-esp32.bin))

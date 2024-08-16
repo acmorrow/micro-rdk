@@ -15,7 +15,7 @@ use crate::common::sensor::TypedReadingsResult;
 use crate::common::status::Status;
 use crate::common::status::StatusError;
 use crate::google::protobuf;
-use core::panic;
+// use core::panic;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use crate::esp32::esp_idf_svc::hal::sys::person_detection::setup_model;
@@ -32,7 +32,7 @@ pub fn register_models(registry: &mut ComponentRegistry) -> Result<(), RegistryE
 
 //create a sensor that requires a camera being in the config for creation
 impl PersonDetection {
-    pub fn from_config(cfg: ConfigType, deps: Vec<Dependency>) -> Result<SensorType, SensorError> {
+    pub fn from_config(_cfg: ConfigType, _deps: Vec<Dependency>) -> Result<SensorType, SensorError> {
         //iterate through to find resource type in deps that would be a camera
         //pass reference to lock to camera as something sensor holds so everytime you get reading you lock cam
         unsafe{

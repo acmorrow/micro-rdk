@@ -64,6 +64,7 @@ bindings_module = "camera"
 bindings_header = "bindings.h"
 
 [[package.metadata.esp-idf-sys.extra_components]]
-remote_component = { name = "allisonschiang/person_detection", version = "2.0.14"}
+#remote_component = { name = "allisonschiang/person_detection", version = "2.0.14"}
+component_dirs = ["../components/person_detection/"]
 bindings_module = "person_detection"
 bindings_header = "pd_bindings.h"
