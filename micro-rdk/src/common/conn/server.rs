@@ -395,6 +395,10 @@ where
         self.app_client_tasks
             .append(&mut robot.lock().unwrap().get_periodic_app_client_tasks());
 
+        // At most, we could have every periodic app client task running concurrently. The plus one
+        // is to account for the grpc client held in self.app_client.
+        let max_anticipated_grpc_clients = self.app_client_tasks.len() + 1;
+
         // Convert each `PeriodicAppClientTask` implementer into an async task spawned on the
         // executor, and collect them all into `_app_client_tasks` so we don't lose track of them.
         let _app_client_tasks: Vec<_> = self
@@ -470,6 +474,12 @@ where
                     let _ = AsyncRwLockUpgradableReadGuard::upgrade(urguard)
                         .await
                         .insert(app_client);
+                } else {
+                    log::info!(
+                        "ViamServer signaling flow has created grpc client clone {} of {}",
+                        urguard.as_ref().unwrap().get_grpc_client_count(),
+                        max_anticipated_grpc_clients
+                    );
                 }
             }
             let sig = if let Some(webrtc_config) = self.webrtc_config.as_ref() {
