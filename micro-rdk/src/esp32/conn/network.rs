@@ -39,7 +39,7 @@ use crate::{common::credentials_storage::WifiCredentials, esp32::esp_idf_svc::sy
 #[cfg(feature = "qemu")]
 use crate::esp32::esp_idf_svc::eth::{BlockingEth, EspEth, OpenEth};
 
-pub(crate) fn esp32_get_system_event_loop() -> Result<&'static EspSystemEventLoop, EspError> {
+pub fn esp32_get_system_event_loop() -> Result<&'static EspSystemEventLoop, EspError> {
     static INSTANCE: OnceCell<EspSystemEventLoop> = OnceCell::new();
     INSTANCE.get_or_try_init(EspSystemEventLoop::take)
 }

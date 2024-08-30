@@ -8,7 +8,9 @@ mod esp32 {
     #[cfg(feature = "qemu")]
     use micro_rdk::esp32::{
         conn::network::eth_configure,
-        esp_idf_svc::eth::{EspEth, EthDriver},
+        esp_idf_svc::{
+            eth::{EspEth, EthDriver},
+        }
     };
 
     use micro_rdk::{
@@ -24,7 +26,7 @@ mod esp32 {
             entry::serve,
             esp_idf_svc::{
                 self,
-                sys::{g_wifi_feature_caps, CONFIG_FEATURE_CACHE_TX_BUF_BIT},
+                sys::{esp, g_wifi_feature_caps, CONFIG_FEATURE_CACHE_TX_BUF_BIT},
             },
             nvs_storage::NVSStorage,
         },
@@ -45,6 +47,19 @@ mod esp32 {
 
     pub(crate) fn main_esp32() {
         esp_idf_svc::sys::link_patches();
+
+        let event_loop = micro_rdk::esp32::conn::network::esp32_get_system_event_loop();
+        let insights_key = std::ffi::CString::new("MAKE AN AUTH KEY").unwrap();
+        let mut insights_config = esp_idf_svc::sys::esp_insights::esp_insights_config_t {
+            log_type: esp_idf_svc::sys::esp_insights::esp_diag_log_type_t_ESP_DIAG_LOG_TYPE_ERROR,
+            node_id: std::ptr::null(),
+            auth_key: insights_key.as_ptr(),
+            alloc_ext_ram: false,
+        };
+        esp!(unsafe {esp_idf_svc::sys::esp_insights::esp_insights_init(&mut insights_config as *mut _)}).expect("Failed to connect to ESP Insights");
+
+
+
         esp_idf_svc::log::EspLogger::initialize_default();
 
         esp_idf_svc::sys::esp!(unsafe {
