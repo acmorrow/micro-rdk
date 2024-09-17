@@ -51,7 +51,7 @@ mod esp32 {
         let event_loop = micro_rdk::esp32::conn::network::esp32_get_system_event_loop();
         let insights_key = std::ffi::CString::new("MAKE AN AUTH KEY").unwrap();
         let mut insights_config = esp_idf_svc::sys::esp_insights::esp_insights_config_t {
-            log_type: esp_idf_svc::sys::esp_insights::esp_diag_log_type_t_ESP_DIAG_LOG_TYPE_ERROR,
+            log_type: esp_idf_svc::sys::esp_insights::esp_diag_log_type_t_ESP_DIAG_LOG_TYPE_ERROR | esp_idf_svc::sys::esp_insights::esp_diag_log_type_t_ESP_DIAG_LOG_TYPE_WARNING | esp_idf_svc::sys::esp_insights::esp_diag_log_type_t_ESP_DIAG_LOG_TYPE_EVENT,
             node_id: std::ptr::null(),
             auth_key: insights_key.as_ptr(),
             alloc_ext_ram: false,
