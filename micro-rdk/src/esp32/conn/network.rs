@@ -255,7 +255,7 @@ impl Esp32WifiNetwork {
         let sl_stack = esp32_get_system_event_loop()?;
 
         let subscription = sl_stack.subscribe::<WifiEvent, _>(move |event: WifiEvent| {
-            if matches!(event, WifiEvent::StaDisconnected) {
+            if matches!(event, WifiEvent::StaDisconnected(_)) {
                 if let Ok(wifi) = esp32_get_wifi() {
                     if let Some(mut wifi_guard) = wifi.try_lock() {
                         let wifi_mut = wifi_guard.wifi_mut();
@@ -269,7 +269,7 @@ impl Esp32WifiNetwork {
                         }
                     }
                 }
-            } else if matches!(event, WifiEvent::StaConnected) {
+            } else if matches!(event, WifiEvent::StaConnected(_)) {
                 log::info!("wifi connected event received");
             }
         })?;

@@ -66,7 +66,7 @@ embedded-svc = "0.27"
 embuild = "0.32.0"
 env_logger = "0.11.5"
 # TODO(RSDK-8994): Upgrade to latest `esp-idf-svc`
-esp-idf-svc = { version = "~0.48", default-features = false }
+esp-idf-svc = { version = "0.50", default-features = false }
 esp-idf-part = "0.5.0"
 espflash = { git = "https://github.com/viamrobotics/espflash.git", branch = "monitor-output" }
 futures = "0.3.31"

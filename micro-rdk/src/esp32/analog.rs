@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use crate::common::analog::{AnalogError, AnalogReader, AnalogResolution};
-use crate::esp32::esp_idf_svc::hal::adc::{AdcChannelDriver, AdcDriver};
+use crate::esp32::esp_idf_svc::hal::adc::oneshot::{AdcChannelDriver, AdcDriver};
 use crate::esp32::esp_idf_svc::hal::gpio::ADCPin;
 use std::sync::{Arc, Mutex};
 
