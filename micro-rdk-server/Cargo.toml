@@ -64,3 +64,8 @@ esp_idf_sdkconfig_defaults = [
 remote_component = { name = "espressif/esp32-camera", version = "2.0.9"}
 bindings_module = "camera"
 bindings_header = "bindings.h"
+
+[[package.metadata.esp-idf-sys.extra_components]]
+component_dirs = "../esp-idf-components/blufi"
+bindings_module = "esp_blufi"
+bindings_header = "../esp-idf-components/blufi/include/blufi.h"
