@@ -121,23 +121,6 @@ mod esp32 {
             }
         }
 
-        unsafe {
-            micro_rdk::esp32::esp_idf_svc::sys::esp!(
-                micro_rdk::esp32::esp_idf_svc::sys::esp_bt_controller_mem_release(
-                    micro_rdk::esp32::esp_idf_svc::sys::esp_bt_mode_t_ESP_BT_MODE_CLASSIC_BT
-                )
-            )
-        }.expect("failed to release BT classic memory");
-
-        unsafe {
-            micro_rdk::esp32::esp_idf_svc::sys::esp_blufi::acmfunc();
-        }
-        unsafe {
-            micro_rdk::esp32::esp_idf_svc::sys::esp!(
-                micro_rdk::esp32::esp_idf_svc::sys::esp_blufi::esp_blufi_profile_init()
-            )
-        }.expect("failed to blufi_profiel_init");
-
         let mut info = ProvisioningInfo::default();
         info.set_manufacturer("viam".to_owned());
         info.set_model("test-esp32".to_owned());
