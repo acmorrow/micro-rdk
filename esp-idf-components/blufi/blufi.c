@@ -27,7 +27,7 @@
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 
-#define BLUFI_EXAMPLE_TAG "MICRO-RDK-BLUFI"
+#define BLUFI_EXAMPLE_TAG "micro-rdk-blufi"
 #define BLUFI_INFO(fmt, ...)   ESP_LOGI(BLUFI_EXAMPLE_TAG, fmt, ##__VA_ARGS__)
 #define BLUFI_ERROR(fmt, ...)  ESP_LOGE(BLUFI_EXAMPLE_TAG, fmt, ##__VA_ARGS__)
 
