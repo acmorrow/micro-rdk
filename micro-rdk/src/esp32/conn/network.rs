@@ -246,7 +246,7 @@ impl Esp32WifiNetwork {
         wifi.wait_netif_up().await?;
 
         crate::esp32::esp_idf_svc::sys::esp!(unsafe {
-            esp_wifi_set_ps(crate::esp32::esp_idf_svc::sys::wifi_ps_type_t_WIFI_PS_NONE)
+            esp_wifi_set_ps(crate::esp32::esp_idf_svc::sys::wifi_ps_type_t_WIFI_PS_MIN_MODEM)
         })?;
 
         let sl_stack = esp32_get_system_event_loop()?;

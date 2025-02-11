@@ -6,16 +6,26 @@
 #include "mbedtls/dhm.h"
 #include "mbedtls/md5.h"
 
-/* #include "esp_blufi_api.h" */
-/* #include "esp_bt.h" */
-/* #include "esp_event.h" */
+#include "esp_blufi.h"
+#include "esp_blufi_api.h"
+#include "esp_bt.h"
+#include "esp_check.h"
+#include "esp_crc.h"
+#include "esp_event.h"
+#include "esp_log.h"
+#include "esp_random.h"
+#include "esp_nimble_hci.h"
+
 /* #include "esp_system.h" */
 /* #include "esp_wifi.h" */
 /* #include "nvs_flash.h" */
 
-#include "esp_crc.h"
-#include "esp_log.h"
-#include "esp_random.h"
+#include "nimble/nimble_port.h"
+#include "nimble/nimble_port_freertos.h"
+#include "host/ble_hs.h"
+#include "host/util/util.h"
+#include "services/gap/ble_svc_gap.h"
+#include "services/gatt/ble_svc_gatt.h"
 
 #define BLUFI_EXAMPLE_TAG "MICRO-RDK-BLUFI"
 #define BLUFI_INFO(fmt, ...)   ESP_LOGI(BLUFI_EXAMPLE_TAG, fmt, ##__VA_ARGS__)
@@ -207,4 +217,116 @@ void blufi_security_deinit(void)
     blufi_sec =  NULL;
 }
 
-XXXACM
+static void* global_state = NULL;
+static simple_blufi_sta_ssid_handler global_sta_ssid_handler = NULL;
+static simple_blufi_sta_pass_handler global_sta_pass_handler = NULL;
+static simple_blufi_aux_data_handler global_aux_data_handler = NULL;
+
+static void blufi_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *param) {
+  switch (event) {
+  case ESP_BLUFI_EVENT_INIT_FINISH:
+    BLUFI_INFO("BLUFI init finish\n");
+    esp_blufi_adv_start();
+    break;
+  case ESP_BLUFI_EVENT_DEINIT_FINISH:
+    BLUFI_INFO("BLUFI deinit finish\n");
+    break;
+  case ESP_BLUFI_EVENT_BLE_CONNECT:
+    BLUFI_INFO("BLUFI ble connect\n");
+    esp_blufi_adv_stop();
+    blufi_security_init();
+    break;
+  case ESP_BLUFI_EVENT_BLE_DISCONNECT:
+    BLUFI_INFO("BLUFI ble disconnect\n");
+    blufi_security_deinit();
+    esp_blufi_adv_start();
+    break;
+  case ESP_BLUFI_EVENT_RECV_STA_SSID:
+    BLUFI_INFO("Recv STA SSID %s\n", "SSID");
+    break;
+  case ESP_BLUFI_EVENT_RECV_STA_PASSWD:
+    BLUFI_INFO("Recv STA PASSWORD %s\n", "PASS");
+    break;
+  case ESP_BLUFI_EVENT_RECV_CUSTOM_DATA:
+    BLUFI_INFO("Recv Custom Data %d\n", param->custom_data.data_len);
+    esp_log_buffer_hex("Custom Data", param->custom_data.data, param->custom_data.data_len);
+    break;
+  default:
+    break;
+  }
+}
+
+static void blufi_on_sync(void) {
+  esp_blufi_profile_init();
+}
+
+static void blufi_on_reset(int reason) {
+}
+
+static void blufi_server_task(void *param) {
+    BLUFI_INFO("BLE Host Task Started");
+    /* This function will return only when nimble_port_stop() is executed */
+    nimble_port_run();
+    nimble_port_freertos_deinit();
+}
+
+#define CHECK(x) { int ret = x; if (ret != ESP_OK) return ret; }
+
+esp_err_t simple_blufi_server_init(
+    void* state,
+    simple_blufi_sta_ssid_handler ssid,
+    simple_blufi_sta_pass_handler pass,
+    simple_blufi_aux_data_handler aux) {
+
+  CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
+
+  esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+  CHECK(esp_bt_controller_init(&bt_cfg));
+  CHECK(esp_bt_controller_enable(ESP_BT_MODE_BLE));
+
+  esp_blufi_callbacks_t blufi_callbacks = {
+    .event_cb = blufi_event_callback,
+    .negotiate_data_handler = blufi_dh_negotiate_data_handler,
+    .encrypt_func = blufi_aes_encrypt,
+    .decrypt_func = blufi_aes_decrypt,
+    .checksum_func = blufi_crc_checksum,
+  };
+
+  CHECK(esp_blufi_register_callbacks(&blufi_callbacks));
+
+  CHECK(esp_nimble_hci_init());
+  nimble_port_init();
+
+  /* Initialize the NimBLE host configuration. */
+  ble_hs_cfg.reset_cb = blufi_on_reset;
+  ble_hs_cfg.sync_cb = blufi_on_sync;
+  ble_hs_cfg.gatts_register_cb = esp_blufi_gatt_svr_register_cb;
+  ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
+  ble_hs_cfg.sm_io_cap = 4;
+  ble_hs_cfg.sm_mitm = 1;
+  ble_hs_cfg.sm_sc = 1;
+
+  int rc = esp_blufi_gatt_svr_init();
+  assert(rc == 0);
+
+  /* Set the default device name. */
+  rc = ble_svc_gap_device_name_set(BLUFI_DEVICE_NAME);
+  assert(rc == 0);
+
+  esp_blufi_btc_init();
+  nimble_port_freertos_init(blufi_server_task);
+
+  return ESP_OK;
+}
+
+void simple_blufi_server_terminate() {
+  int ret = nimble_port_stop();
+  if (ret == 0) {
+    nimble_port_deinit();
+
+    ret = esp_nimble_hci_and_controller_deinit();
+    if (ret != ESP_OK) {
+      BLUFI_ERROR("esp_nimble_hci_and_controller_deinit() failed with error: %d", ret);
+    }
+  }
+}

@@ -151,6 +151,17 @@ mod esp32 {
                 Box::new(network),
             )
         };
+
+        std::thread::spawn(|| unsafe {
+            micro_rdk::esp32::esp_idf_svc::sys::esp_blufi::simple_blufi_server_init(
+                std::ptr::null_mut(),
+                None,
+                None,
+                None
+            )
+        });
+
+
         #[cfg(not(feature = "qemu"))]
         let mut server = { builder.build(Esp32H2Connector::default(), Executor::new(), mdns) };
         server.run_forever();
