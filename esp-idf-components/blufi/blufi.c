@@ -58,7 +58,7 @@ struct blufi_security {
     mbedtls_dhm_context dhm;
     mbedtls_aes_context aes;
 };
-static struct blufi_security *blufi_sec;
+static struct blufi_security *blufi_sec = NULL;
 
 static int myrand( void *rng_state, unsigned char *output, size_t len )
 {
@@ -69,7 +69,7 @@ static int myrand( void *rng_state, unsigned char *output, size_t len )
 // TODO: Should this use `esp_blufi_send_error_info` instead?
 extern void btc_blufi_report_error(esp_blufi_error_state_t state);
 
-void blufi_dh_negotiate_data_handler(uint8_t *data, int len, uint8_t **output_data, int *output_len, bool *need_free)
+static void blufi_dh_negotiate_data_handler(uint8_t *data, int len, uint8_t **output_data, int *output_len, bool *need_free)
 {
     int ret;
     uint8_t type = data[0];
@@ -143,7 +143,7 @@ void blufi_dh_negotiate_data_handler(uint8_t *data, int len, uint8_t **output_da
     }
 }
 
-int blufi_aes_encrypt(uint8_t iv8, uint8_t *crypt_data, int crypt_len)
+static int blufi_aes_encrypt(uint8_t iv8, uint8_t *crypt_data, int crypt_len)
 {
     int ret;
     size_t iv_offset = 0;
@@ -160,7 +160,7 @@ int blufi_aes_encrypt(uint8_t iv8, uint8_t *crypt_data, int crypt_len)
     return crypt_len;
 }
 
-int blufi_aes_decrypt(uint8_t iv8, uint8_t *crypt_data, int crypt_len)
+static int blufi_aes_decrypt(uint8_t iv8, uint8_t *crypt_data, int crypt_len)
 {
     int ret;
     size_t iv_offset = 0;
@@ -177,13 +177,13 @@ int blufi_aes_decrypt(uint8_t iv8, uint8_t *crypt_data, int crypt_len)
     return crypt_len;
 }
 
-uint16_t blufi_crc_checksum(uint8_t iv8, uint8_t *data, int len)
+static uint16_t blufi_crc_checksum(uint8_t iv8, uint8_t *data, int len)
 {
     /* This iv8 ignore, not used */
     return esp_crc16_be(0, data, len);
 }
 
-esp_err_t blufi_security_init(void)
+static esp_err_t blufi_security_init(void)
 {
     blufi_sec = (struct blufi_security *)malloc(sizeof(struct blufi_security));
     if (blufi_sec == NULL) {
@@ -199,7 +199,7 @@ esp_err_t blufi_security_init(void)
     return 0;
 }
 
-void blufi_security_deinit(void)
+static void blufi_security_deinit(void)
 {
     if (blufi_sec == NULL) {
         return;
@@ -220,7 +220,7 @@ void blufi_security_deinit(void)
 static void* global_state = NULL;
 static simple_blufi_sta_ssid_handler global_sta_ssid_handler = NULL;
 static simple_blufi_sta_pass_handler global_sta_pass_handler = NULL;
-static simple_blufi_aux_data_handler global_aux_data_handler = NULL;
+static simple_blufi_custom_data_handler global_custom_data_handler = NULL;
 
 static void blufi_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *param) {
   switch (event) {
@@ -242,14 +242,22 @@ static void blufi_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_
     esp_blufi_adv_start();
     break;
   case ESP_BLUFI_EVENT_RECV_STA_SSID:
-    BLUFI_INFO("Recv STA SSID %s\n", "SSID");
+    BLUFI_INFO("Recv STA SSID %d bytes\n", param->sta_ssid.ssid_len);
+    esp_log_buffer_hex("Password hex bytes", param->sta_ssid.ssid, param->sta_ssid.ssid_len);
+    if (global_sta_ssid_handler)
+      global_sta_ssid_handler(global_state, param->sta_ssid.ssid, param->sta_ssid.ssid_len);
     break;
   case ESP_BLUFI_EVENT_RECV_STA_PASSWD:
-    BLUFI_INFO("Recv STA PASSWORD %s\n", "PASS");
+    BLUFI_INFO("Recv STA PASSWORD %d bytes\n", param->sta_passwd.passwd_len);
+    esp_log_buffer_hex("Password hex bytes", param->sta_passwd.passwd, param->sta_passwd.passwd_len);
+    if (global_sta_pass_handler)
+      global_sta_pass_handler(global_state, param->sta_passwd.passwd, param->sta_passwd.passwd_len);
     break;
   case ESP_BLUFI_EVENT_RECV_CUSTOM_DATA:
-    BLUFI_INFO("Recv Custom Data %d\n", param->custom_data.data_len);
-    esp_log_buffer_hex("Custom Data", param->custom_data.data, param->custom_data.data_len);
+    BLUFI_INFO("Recv Custom Data %d bytes\n", param->custom_data.data_len);
+    esp_log_buffer_hex("Custom Data hex bytes", param->custom_data.data, param->custom_data.data_len);
+    if (global_custom_data_handler)
+      global_custom_data_handler(global_state, param->custom_data.data, param->custom_data.data_len);
     break;
   default:
     break;
@@ -276,7 +284,7 @@ esp_err_t simple_blufi_server_init(
     void* state,
     simple_blufi_sta_ssid_handler ssid,
     simple_blufi_sta_pass_handler pass,
-    simple_blufi_aux_data_handler aux) {
+    simple_blufi_custom_data_handler custom) {
 
   CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 
@@ -314,6 +322,12 @@ esp_err_t simple_blufi_server_init(
   assert(rc == 0);
 
   esp_blufi_btc_init();
+
+  global_state = state;
+  global_sta_ssid_handler = ssid;
+  global_sta_pass_handler = pass;
+  global_custom_data_handler = custom;
+
   nimble_port_freertos_init(blufi_server_task);
 
   return ESP_OK;
@@ -322,6 +336,12 @@ esp_err_t simple_blufi_server_init(
 void simple_blufi_server_terminate() {
   int ret = nimble_port_stop();
   if (ret == 0) {
+
+    global_sta_ssid_handler = NULL;
+    global_sta_pass_handler = NULL;
+    global_custom_data_handler = NULL;
+    global_state = NULL;
+
     nimble_port_deinit();
 
     ret = esp_nimble_hci_and_controller_deinit();
