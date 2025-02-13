@@ -173,7 +173,7 @@ mod esp32 {
                     Some(ssid_handler),
                     Some(pass_handler),
                     Some(custom_handler),
-                )
+                );
             }
         });
 
