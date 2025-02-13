@@ -16,10 +16,6 @@
 #include "esp_random.h"
 #include "esp_nimble_hci.h"
 
-/* #include "esp_system.h" */
-/* #include "esp_wifi.h" */
-/* #include "nvs_flash.h" */
-
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
 #include "host/ble_hs.h"
@@ -66,9 +62,6 @@ static int myrand( void *rng_state, unsigned char *output, size_t len )
     return( 0 );
 }
 
-// TODO: Should this use `esp_blufi_send_error_info` instead?
-extern void btc_blufi_report_error(esp_blufi_error_state_t state);
-
 static void blufi_dh_negotiate_data_handler(uint8_t *data, int len, uint8_t **output_data, int *output_len, bool *need_free)
 {
     int ret;
@@ -76,7 +69,7 @@ static void blufi_dh_negotiate_data_handler(uint8_t *data, int len, uint8_t **ou
 
     if (blufi_sec == NULL) {
         BLUFI_ERROR("BLUFI Security is not initialized");
-        btc_blufi_report_error(ESP_BLUFI_INIT_SECURITY_ERROR);
+        esp_blufi_send_error_info(ESP_BLUFI_INIT_SECURITY_ERROR);
         return;
     }
 
@@ -89,7 +82,7 @@ static void blufi_dh_negotiate_data_handler(uint8_t *data, int len, uint8_t **ou
         }
         blufi_sec->dh_param = (uint8_t *)malloc(blufi_sec->dh_param_len);
         if (blufi_sec->dh_param == NULL) {
-            btc_blufi_report_error(ESP_BLUFI_DH_MALLOC_ERROR);
+            esp_blufi_send_error_info(ESP_BLUFI_DH_MALLOC_ERROR);
             BLUFI_ERROR("%s, malloc failed\n", __func__);
             return;
         }
@@ -97,7 +90,7 @@ static void blufi_dh_negotiate_data_handler(uint8_t *data, int len, uint8_t **ou
     case SEC_TYPE_DH_PARAM_DATA:{
         if (blufi_sec->dh_param == NULL) {
             BLUFI_ERROR("%s, blufi_sec->dh_param == NULL\n", __func__);
-            btc_blufi_report_error(ESP_BLUFI_DH_PARAM_ERROR);
+            esp_blufi_send_error_info(ESP_BLUFI_DH_PARAM_ERROR);
             return;
         }
         uint8_t *param = blufi_sec->dh_param;
@@ -105,7 +98,7 @@ static void blufi_dh_negotiate_data_handler(uint8_t *data, int len, uint8_t **ou
         ret = mbedtls_dhm_read_params(&blufi_sec->dhm, &param, &param[blufi_sec->dh_param_len]);
         if (ret) {
             BLUFI_ERROR("%s read param failed %d\n", __func__, ret);
-            btc_blufi_report_error(ESP_BLUFI_READ_PARAM_ERROR);
+            esp_blufi_send_error_info(ESP_BLUFI_READ_PARAM_ERROR);
             return;
         }
         free(blufi_sec->dh_param);
@@ -113,7 +106,7 @@ static void blufi_dh_negotiate_data_handler(uint8_t *data, int len, uint8_t **ou
         ret = mbedtls_dhm_make_public(&blufi_sec->dhm, (int) mbedtls_mpi_size( &blufi_sec->dhm.P ), blufi_sec->self_public_key, blufi_sec->dhm.len, myrand, NULL);
         if (ret) {
             BLUFI_ERROR("%s make public failed %d\n", __func__, ret);
-            btc_blufi_report_error(ESP_BLUFI_MAKE_PUBLIC_ERROR);
+            esp_blufi_send_error_info(ESP_BLUFI_MAKE_PUBLIC_ERROR);
             return;
         }
 
@@ -271,13 +264,6 @@ static void blufi_on_sync(void) {
 static void blufi_on_reset(int reason) {
 }
 
-static void blufi_server_task(void *param) {
-    BLUFI_INFO("BLE Host Task Started");
-    /* This function will return only when nimble_port_stop() is executed */
-    nimble_port_run();
-    nimble_port_freertos_deinit();
-}
-
 #define CHECK(x) { int ret = x; if (ret != ESP_OK) return ret; }
 
 esp_err_t simple_blufi_server_init(
@@ -328,7 +314,7 @@ esp_err_t simple_blufi_server_init(
   global_sta_pass_handler = pass;
   global_custom_data_handler = custom;
 
-  nimble_port_freertos_init(blufi_server_task);
+  nimble_port_run();
 
   return ESP_OK;
 }
