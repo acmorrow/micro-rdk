@@ -168,12 +168,14 @@ mod esp32 {
             }
 
             || unsafe {
+                log::info!("XXX ACM calling simple_blufi_server_init");
                 micro_rdk::esp32::esp_idf_svc::sys::esp_blufi::simple_blufi_server_init(
                     std::ptr::null_mut(),
                     Some(ssid_handler),
                     Some(pass_handler),
                     Some(custom_handler),
                 );
+                log::info!("XXX ACM simple_blufi_server_init finished");
             }
         });
 
