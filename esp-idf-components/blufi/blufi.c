@@ -64,6 +64,8 @@ static int myrand( void *rng_state, unsigned char *output, size_t len )
 
 static void blufi_dh_negotiate_data_handler(uint8_t *data, int len, uint8_t **output_data, int *output_len, bool *need_free)
 {
+    BLUFI_INFO("XXX ACM blufi_dh_negotiate_data_handler\n");
+
     int ret;
     uint8_t type = data[0];
 
@@ -138,6 +140,7 @@ static void blufi_dh_negotiate_data_handler(uint8_t *data, int len, uint8_t **ou
 
 static int blufi_aes_encrypt(uint8_t iv8, uint8_t *crypt_data, int crypt_len)
 {
+    BLUFI_INFO("XXX ACM blufi_aes_encrypt\n");
     int ret;
     size_t iv_offset = 0;
     uint8_t iv0[16];
@@ -155,6 +158,7 @@ static int blufi_aes_encrypt(uint8_t iv8, uint8_t *crypt_data, int crypt_len)
 
 static int blufi_aes_decrypt(uint8_t iv8, uint8_t *crypt_data, int crypt_len)
 {
+    BLUFI_INFO("XXX ACM blufi_aes_decrypt\n");
     int ret;
     size_t iv_offset = 0;
     uint8_t iv0[16];
@@ -172,12 +176,14 @@ static int blufi_aes_decrypt(uint8_t iv8, uint8_t *crypt_data, int crypt_len)
 
 static uint16_t blufi_crc_checksum(uint8_t iv8, uint8_t *data, int len)
 {
+    BLUFI_INFO("XXX ACM blufi_crc_checksum\n");
     /* This iv8 ignore, not used */
     return esp_crc16_be(0, data, len);
 }
 
 static esp_err_t blufi_security_init(void)
 {
+    BLUFI_INFO("XXX ACM blufi_security_init\n");
     blufi_sec = (struct blufi_security *)malloc(sizeof(struct blufi_security));
     if (blufi_sec == NULL) {
         return ESP_FAIL;
@@ -194,6 +200,8 @@ static esp_err_t blufi_security_init(void)
 
 static void blufi_security_deinit(void)
 {
+    BLUFI_INFO("XXX ACM blufi_security_deinit\n");
+
     if (blufi_sec == NULL) {
         return;
     }
@@ -216,6 +224,8 @@ static simple_blufi_sta_pass_handler global_sta_pass_handler = NULL;
 static simple_blufi_custom_data_handler global_custom_data_handler = NULL;
 
 static void blufi_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *param) {
+  BLUFI_INFO("XXX ACM blufi_event_callback %d\n", (int)event);
+
   switch (event) {
   case ESP_BLUFI_EVENT_INIT_FINISH:
     BLUFI_INFO("BLUFI init finish\n");
