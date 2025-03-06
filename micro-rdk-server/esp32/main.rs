@@ -6,7 +6,6 @@ mod esp32 {
     const ROBOT_SECRET: Option<&str> = option_env!("MICRO_RDK_ROBOT_SECRET");
     const ROBOT_APP_ADDRESS: Option<&str> = option_env!("MICRO_RDK_ROBOT_APP_ADDRESS");
 
-    use std::ffi::c_void;
     use std::rc::Rc;
 
     use micro_rdk::common::conn::server::WebRtcConfiguration;
@@ -152,33 +151,6 @@ mod esp32 {
                 Box::new(network),
             )
         };
-
-        std::thread::spawn({
-
-            extern "C" fn ssid_handler(state: *mut c_void, sta_ssid: *const u8, len: usize) {
-                log::info!("XXX ACM ssid_handler in Rust");
-            }
-
-            extern "C" fn pass_handler(state: *mut c_void, sta_pass: *const u8, len: usize) {
-                log::info!("XXX ACM pass_handler in Rust");
-            }
-
-            extern "C" fn custom_handler(state: *mut c_void, data: *const u8, len: usize) {
-                log::info!("XXX ACM custom_handler in Rust");
-            }
-
-            || unsafe {
-                log::info!("XXX ACM calling simple_blufi_server_init");
-                micro_rdk::esp32::esp_idf_svc::sys::esp_blufi::simple_blufi_server_init(
-                    std::ptr::null_mut(),
-                    Some(ssid_handler),
-                    Some(pass_handler),
-                    Some(custom_handler),
-                );
-                log::info!("XXX ACM simple_blufi_server_init finished");
-            }
-        });
-
 
         #[cfg(not(feature = "qemu"))]
         let mut server = { builder.build(Esp32H2Connector::default(), Executor::new(), mdns) };

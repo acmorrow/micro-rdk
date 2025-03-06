@@ -8,6 +8,11 @@ use std::{
     rc::Rc,
 };
 
+#[cfg(feature = "esp32")]
+use crate::esp32::esp_idf_svc::sys::esp;
+#[cfg(feature = "esp32")]
+use std::ffi::c_void;
+
 use crate::{
     common::{
         config::NetworkSetting,
@@ -647,12 +652,97 @@ where
 
     let provisioning_server_task = exec.spawn(accept_connections(listen, srv, cloned_exec));
 
+    #[cfg(feature = "esp32")]
+    let blufi_thread_jh = std::thread::spawn({
+        log::info!("XXX ACM starting blufi server thread");
+
+        // TODO: Dry this with `micro-rdk-server/build.rs`
+        struct Cloud {
+            pub id: String,
+            pub secret: String,
+            pub app_address: String,
+        }
+
+        struct Config {
+            pub cloud: Cloud,
+        }
+
+        #[derive(Default)]
+        struct State {
+            wifi_ssid: Option<String>,
+            wifi_pass: Option<String>,
+            cloud: Option<Cloud>,
+        }
+
+        extern "C" fn ssid_handler(state: *mut c_void, sta_ssid: *const u8, len: usize) {
+            log::info!("XXX ACM ssid_handler in Rust {:?}", state);
+            let state = unsafe { &mut *(state as *mut State) };
+            state.wifi_ssid = String::from_utf8(
+                unsafe { std::slice::from_raw_parts(sta_ssid as *mut u8, len) }.to_vec(),
+            )
+            .ok();
+            if let Some(ssid) = &state.wifi_ssid {
+                log::info!("XXX ACM ssid in Rust {}", ssid);
+            }
+        }
+
+        extern "C" fn pass_handler(state: *mut c_void, sta_pass: *const u8, len: usize) {
+            log::info!("XXX ACM pass_handler in Rust {:?}", state);
+            let state = unsafe { &mut *(state as *mut State) };
+            state.wifi_pass = String::from_utf8(
+                unsafe { std::slice::from_raw_parts(sta_pass as *mut u8, len) }.to_vec(),
+            )
+            .ok();
+            if let Some(pass) = &state.wifi_pass {
+                log::info!("XXX ACM pass in Rust {}", pass);
+            }
+        }
+
+        extern "C" fn custom_handler(state: *mut c_void, data: *const u8, len: usize) {
+            log::info!("XXX ACM custom_handler in Rust {:?}", state);
+            let state = unsafe { &mut *(state as *mut State) };
+            let custom = String::from_utf8(
+                unsafe { std::slice::from_raw_parts(data as *mut u8, len) }.to_vec(),
+            )
+            .ok();
+            if let Some(custom) = &custom {
+                log::info!("XXX ACM custom data in Rust {}", custom);
+            }
+        }
+
+        || unsafe {
+            log::info!("XXX ACM calling simple_blufi_server_init");
+            let mut state = State::default();
+            esp!(
+                crate::esp32::esp_idf_svc::sys::esp_blufi::simple_blufi_server_init(
+                    &mut state as *mut State as *mut c_void,
+                    Some(ssid_handler),
+                    Some(pass_handler),
+                    Some(custom_handler),
+                )
+            )
+            .expect("Failed to start BluFi server");
+            log::info!("XXX ACM simple_blufi_server_init finished");
+        }
+    });
+
     // Future will complete when either robot credentials have been transmitted when WiFi provisioning is disabled
     // or when both robot credentials and WiFi credentials have been transmitted.
     // wait for provisioning completion
     log::info!("waiting for provisioning server to obtain credentials");
     credential_ready.await;
     log::info!("provisioning server has obtained the desired credentials");
+
+    #[cfg(feature = "esp32")]
+    {
+        log::info!("XXX ACM calling simple_blufi_server_terminate");
+        unsafe {
+            crate::esp32::esp_idf_svc::sys::esp_blufi::simple_blufi_server_terminate();
+        }
+        log::info!("XXX ACM waiting for blufi server thread to terminate");
+        let _ = blufi_thread_jh.join();
+        log::info!("XXX ACM blufi server thread terminated");
+    }
 
     provisioning_server_task.cancel().await;
     let mut mdns = mdns.borrow_mut();
