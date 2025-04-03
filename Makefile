@@ -81,7 +81,7 @@ build-esp32-bin:
 		--target=xtensa-esp32-espidf \
 		-Zbuild-std=std,panic_abort \
 		--release \
-		--flash-size=8mb \
+		--flash-size=4mb \
 		--merge \
 		target/xtensa-esp32-espidf/release/micro-rdk-server-esp32.bin
 
