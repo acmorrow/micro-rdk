@@ -1,7 +1,7 @@
 .PHONY: build
 
 # Older ESP32 devices might only have 4mb of flash and slower
-FLASHSIZE:=8mb
+FLASHSIZE:=4mb
 BAUDRATE:=460800
 
 clean:
